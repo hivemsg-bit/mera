@@ -300,7 +300,11 @@
             <h2 style="margin-bottom: 20px; text-align: center;">Registration Form</h2>
             
             <!-- Debug Info - Remove in production -->
-           
+            <div class="debug-info" id="debugInfo">
+                <strong>Debug Info:</strong> 
+                <span id="debugText">Checking connection...</span>
+            </div>
+            
             <form id="registrationForm">
                 <div class="form-group">
                     <label for="fullName">Full Name</label>
@@ -415,13 +419,13 @@
 
     <script>
         // ⚠️ REPLACE THIS WITH YOUR ACTUAL GOOGLE APPS SCRIPT URL ⚠️
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxs2yfdq48rrfp_Rq1Qq1d1Lc_bogunavbprTNAjQ-jjTKTYaRyGtoFpwdP-BS8dm9i/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
         
         // Test the connection on page load
         window.addEventListener('load', function() {
             document.getElementById('debugInfo').style.display = 'block';
             document.getElementById('debugText').textContent = 
-                
+                'Please set GOOGLE_SCRIPT_URL in the JavaScript code (line 348)';
         });
         
         document.getElementById('registrationForm').addEventListener('submit', async function(e) {
@@ -482,7 +486,7 @@
                     document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
                     
                     // Hide debug info
-                   // document.getElementById('debugInfo').style.display = 'none';
+                    document.getElementById('debugInfo').style.display = 'none';
                 } else {
                     throw new Error(result.message);
                 }
