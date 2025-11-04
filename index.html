@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marathon Registration</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -232,6 +231,16 @@
             margin: 0 auto;
         }
         
+        .error-message {
+            display: none;
+            text-align: center;
+            padding: 15px;
+            background: #f44336;
+            color: white;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -346,6 +355,11 @@
                 <p>Processing your registration...</p>
             </div>
             
+            <div class="error-message" id="errorMessage">
+                <h3>Registration Failed</h3>
+                <p id="errorText">There was an error processing your registration. Please try again.</p>
+            </div>
+            
             <div class="success-message" id="successMessage">
                 <h3>Registration Successful!</h3>
                 <p>Your registration details are below. You can download the confirmation as PDF.</p>
@@ -385,39 +399,81 @@
     </div>
 
     <script>
-        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+        // Replace with your Google Apps Script Web App URL
+        const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+        
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Show loader
+            // Show loader, hide errors
             document.getElementById('loader').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
             
-            // Generate registration number
-            const regNumber = 'MRN' + new Date().getFullYear() + 
-                String(Math.floor(Math.random() * 100000)).padStart(5, '0');
+            // Get form data
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value || 'Not provided',
+                age: document.getElementById('age').value,
+                gender: document.getElementById('gender').value,
+                category: document.getElementById('category').value,
+                tshirt: document.getElementById('tshirt').value,
+                registrationNumber: 'MRN' + new Date().getFullYear() + 
+                    String(Math.floor(Math.random() * 100000)).padStart(5, '0')
+            };
             
-            // Simulate form submission and API call
-            setTimeout(function() {
+            try {
+                // Send data to Google Sheets
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // Hide loader
+                    document.getElementById('loader').style.display = 'none';
+                    
+                    // Set registration number
+                    document.getElementById('regNumber').textContent = formData.registrationNumber;
+                    
+                    // Show success message
+                    document.getElementById('successMessage').style.display = 'block';
+                    
+                    // Reset form
+                    document.getElementById('registrationForm').reset();
+                    
+                    // Scroll to success message
+                    document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
                 // Hide loader
                 document.getElementById('loader').style.display = 'none';
                 
-                // Set registration number
-                document.getElementById('regNumber').textContent = regNumber;
+                // Show error message
+                document.getElementById('errorText').textContent = error.message;
+                document.getElementById('errorMessage').style.display = 'block';
                 
-                // Show success message
-                document.getElementById('successMessage').style.display = 'block';
-                
-                // Reset form
-                document.getElementById('registrationForm').reset();
-                
-                // In a real implementation, you would send the form data to Google Sheets
-                console.log("Form data would be sent to Google Sheets here");
-            }, 2000);
+                console.error('Error:', error);
+            }
         });
         
         // PDF Download functionality
         document.getElementById('downloadBtn').addEventListener('click', function() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            
+            // Get registration details
+            const regNumber = document.getElementById('regNumber').textContent;
+            const fullName = document.getElementById('fullName').value;
+            const phone = document.getElementById('phone').value;
+            const category = document.getElementById('category').options[document.getElementById('category').selectedIndex].text;
             
             // Add background
             doc.setFillColor(106, 17, 203);
@@ -439,10 +495,10 @@
             
             doc.setFontSize(14);
             doc.setTextColor(0, 0, 0);
-            doc.text(`Registration Number: ${document.getElementById('regNumber').textContent}`, 20, 90);
-            doc.text(`Name: ${document.getElementById('fullName').value}`, 20, 105);
-            doc.text(`Phone: ${document.getElementById('phone').value}`, 20, 120);
-            doc.text(`Category: ${document.getElementById('category').options[document.getElementById('category').selectedIndex].text}`, 20, 135);
+            doc.text(`Registration Number: ${regNumber}`, 20, 90);
+            doc.text(`Name: ${fullName}`, 20, 105);
+            doc.text(`Phone: ${phone}`, 20, 120);
+            doc.text(`Category: ${category}`, 20, 135);
             
             // Event details
             doc.setFontSize(16);
@@ -461,7 +517,7 @@
             doc.text('Please bring this confirmation and a valid ID to the event.', 105, 250, { align: 'center' });
             
             // Save the PDF
-            doc.save(`marathon-registration-${document.getElementById('regNumber').textContent}.pdf`);
+            doc.save(`marathon-registration-${regNumber}.pdf`);
         });
         
         // For demonstration, let's prefill the phone field if it's in the URL
