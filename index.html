@@ -241,6 +241,16 @@
             margin-top: 15px;
         }
         
+        .debug-info {
+            background: #ffeb3b;
+            color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            display: none;
+        }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -288,6 +298,12 @@
         
         <div class="form-container">
             <h2 style="margin-bottom: 20px; text-align: center;">Registration Form</h2>
+            
+            <!-- Debug Info - Remove in production -->
+            <div class="debug-info" id="debugInfo">
+                <strong>Debug Info:</strong> 
+                <span id="debugText">Checking connection...</span>
+            </div>
             
             <form id="registrationForm">
                 <div class="form-group">
@@ -358,6 +374,9 @@
             <div class="error-message" id="errorMessage">
                 <h3>Registration Failed</h3>
                 <p id="errorText">There was an error processing your registration. Please try again.</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    If this continues, please contact: info@marathonevent.com
+                </p>
             </div>
             
             <div class="success-message" id="successMessage">
@@ -399,8 +418,15 @@
     </div>
 
     <script>
-        // Replace with your Google Apps Script Web App URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz002E5eswSuRqsmzLzGreOHsWTNX3PeWRZgl30NNr1q3HkQckKuTPBSAWPEynkcJZ6/exec';
+        // ⚠️ REPLACE THIS WITH YOUR ACTUAL GOOGLE APPS SCRIPT URL ⚠️
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZ9YDDswA8FsnnqGkmiT8kQf76J5G0dXESDQCi1_Us5boTXFKkGKDtvPJzrwt1InFS/exec';
+        
+        // Test the connection on page load
+        window.addEventListener('load', function() {
+            document.getElementById('debugInfo').style.display = 'block';
+            document.getElementById('debugText').textContent = 
+                'Please set GOOGLE_SCRIPT_URL in the JavaScript code (line 348)';
+        });
         
         document.getElementById('registrationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -408,6 +434,15 @@
             // Show loader, hide errors
             document.getElementById('loader').style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
+            
+            // Validate Google Script URL
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('errorText').textContent = 
+                    'Google Apps Script URL not configured. Please contact administrator.';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
             
             // Get form data
             const formData = {
@@ -427,7 +462,7 @@
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'text/plain;charset=utf-8',
                     },
                     body: JSON.stringify(formData)
                 });
@@ -449,6 +484,9 @@
                     
                     // Scroll to success message
                     document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Hide debug info
+                    document.getElementById('debugInfo').style.display = 'none';
                 } else {
                     throw new Error(result.message);
                 }
@@ -456,11 +494,16 @@
                 // Hide loader
                 document.getElementById('loader').style.display = 'none';
                 
-                // Show error message
-                document.getElementById('errorText').textContent = error.message;
+                // Show error message with specific details
+                let errorMsg = 'Registration failed: ' + error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg = 'Cannot connect to server. Please check your internet connection and try again.';
+                }
+                
+                document.getElementById('errorText').textContent = errorMsg;
                 document.getElementById('errorMessage').style.display = 'block';
                 
-                console.error('Error:', error);
+                console.error('Registration Error:', error);
             }
         });
         
@@ -473,7 +516,8 @@
             const regNumber = document.getElementById('regNumber').textContent;
             const fullName = document.getElementById('fullName').value;
             const phone = document.getElementById('phone').value;
-            const category = document.getElementById('category').options[document.getElementById('category').selectedIndex].text;
+            const categorySelect = document.getElementById('category');
+            const category = categorySelect.options[categorySelect.selectedIndex].text;
             
             // Add background
             doc.setFillColor(106, 17, 203);
@@ -520,7 +564,7 @@
             doc.save(`marathon-registration-${regNumber}.pdf`);
         });
         
-        // For demonstration, let's prefill the phone field if it's in the URL
+        // For demonstration, prefill the phone field if it's in the URL
         const urlParams = new URLSearchParams(window.location.search);
         const phone = urlParams.get('phone');
         if (phone) {
